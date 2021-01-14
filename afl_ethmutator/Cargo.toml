@@ -1,0 +1,20 @@
+[package]
+name = "afl_ethmutator"
+version = "0.1.0"
+authors = ["Michael Rodler <michael.rodler@paluno.uni-due.de>"]
+edition = "2018"
+license = "LGPLv3"
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["afl-custom-splice", "afl-custom-trim"]
+afl-custom-trim = []
+afl-custom-splice = []
+afl-custom-havoc = []
+
+[dependencies]
+ethmutator = {path = "../ethmutator"}
+libc = "0.2"
+

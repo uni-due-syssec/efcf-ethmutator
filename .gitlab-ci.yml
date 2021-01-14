@@ -1,0 +1,161 @@
+stages:
+  - build-1
+  - build-2
+  - test
+  - dist-build
+  - dist-test
+  - distribution-test
+
+.base: &base
+  image: rust:latest
+  before_script:
+    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@git.uni-due.de/".insteadOf "ssh://git@git.uni-due.de"
+    - cd "$CI_PROJECT_DIR"
+    - rustc --version && cargo --version
+  variables:
+    CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+    RUST_BACKTRACE: "full"
+  cache:
+    paths:
+      - target/
+
+build:
+  <<: *base
+  stage: build-1
+  script:
+    - cargo build --verbose
+
+docs: &docs
+  <<: *base
+  stage: build-2
+  needs: ["build"]
+  script:
+    - cargo doc --verbose
+  artifacts:
+    paths:
+      - target/doc/
+    expire_in: 1 week
+  when: always
+
+pages:
+  <<: *base
+  stage: dist-build
+  needs: ["docs"]
+  when: always
+  only:
+    - master
+  script:
+    - cp -r target/doc public || (cargo doc && cp -r target/doc public)
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 week
+
+test:
+  <<: *base
+  stage: test
+  needs: ["build"]
+  script:
+    - cargo test --verbose
+
+test-all-release:
+  <<: *base
+  stage: test
+  needs: ["build"]
+  allow_failure: true
+  script:
+    - cargo test --release --all --verbose --features use_mimalloc_secure -- --include-ignored
+
+test-nightly:
+  <<: *base
+  stage: test
+  needs: ["build"]
+  image: rustlang/rust:nightly
+  script:
+    - cargo install --force grcov
+    - export CARGO_INCREMENTAL="0"
+    - export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+    - export RUSTDOCFLAGS="-Cpanic=abort"
+    - cargo build --quiet -p ethmutator
+    - cargo test --quiet -p ethmutator
+    - grcov ./target/debug/ -s . -t html --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
+  artifacts:
+    paths:
+      - target/debug/coverage/
+
+bench:
+  extends: test-nightly
+  before_script:
+    - apt-get update; apt-get install -q --no-install-recommends -y cmake build-essential
+  script:
+    - cd "$CI_PROJECT_DIR/ethmutator"; bash ./benches/run_allocator_comparision.sh
+  allow_failure: true
+
+.test-miri:
+  stage: test
+  needs: ["build"]
+  image: rustlang/rust:nightly
+  allow_failure: true
+
+  before_script:
+    - 'export MIRI_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)'
+    - "echo Installing latest nightly with Miri: $MIRI_NIGHTLY"
+    - rustup set profile minimal
+    - "rustup default \"$MIRI_NIGHTLY\""
+    - rustup component add miri
+
+  script:
+    - rustc --version; cargo --version; cargo miri --version
+    - cargo miri test -p ethmutator --no-default-features
+
+  variables:
+    RUST_BACKTRACE: "1"
+    MIRIFLAGS: "-Zmiri-disable-isolation"
+
+audit:
+  <<: *base
+  stage: test
+  needs: ["build"]
+  script:
+    - cargo install --force cargo-audit
+    - test -e Cargo.lock || cargo generate-lockfile
+    - cargo check --verbose
+    - cargo audit
+
+.dist-build:
+  <<: *base
+  stage: dist-build
+  needs: ["test"]
+  script:
+    - cargo build --verbose --release
+  artifacts:
+    paths:
+      - target/release/libafl_ethmutator.so
+    expire_in: 1 week
+
+
+.distri-test: &distri-test
+  stage: distribution-test
+  needs: ["test"]
+  script:
+    - command -v cargo || source "$HOME/.cargo/env"
+    - cd "$CI_PROJECT_DIR"
+    - rustc --version && cargo --version
+    - cargo build
+    - cargo test
+  variables:
+    CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+    RUST_BACKTRACE: "1"
+  allow_failure: true
+
+arch-test:
+  <<: *distri-test
+  image: archlinux:base-devel
+  before_script:
+    - pacman -Syu --noconfirm; pacman-db-upgrade; pacman -Syu --noconfirm git rust cargo
+
+fedora-test:
+  <<: *distri-test
+  image: fedora:latest
+  before_script:
+    - dnf install -y git rust cargo

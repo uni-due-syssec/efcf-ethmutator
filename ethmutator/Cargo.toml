@@ -1,0 +1,51 @@
+[package]
+name = "ethmutator"
+version = "0.3.1"
+authors = ["Michael Rodler <michael.rodler@paluno.uni-due.de>"]
+edition = "2018"
+license = "AGPLv3"
+
+[features]
+default = ["use_mimalloc", "tests_with_fs", "stresstests"]
+use_jemalloc = ["jemallocator"]
+use_mimalloc = ["mimalloc"]
+use_mimalloc_secure = ["mimalloc/secure"]
+use_snmalloc = ["snmalloc-rs"]
+tests_with_fs = []
+stresstests = []
+
+[dependencies]
+libc = "0.2"
+zerocopy = "0.6"
+byte-slice-cast = "1.2"
+rand = "0.8"
+rand_pcg = "0.3"
+rand_distr = "0.4"
+sha3 = "0.10"
+lazy_static = "1.4"
+ethereum-hexutil = "0.2"
+# ethabi = "17"
+ethabi = { git = "https://github.com/rust-ethereum/ethabi.git", rev = "c42c673" }
+ethereum-types = {version ="0.13", default-features = false}
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_yaml = "0.8"
+tempfile = "3.2"
+jemallocator = { version = "*", optional = true }
+mimalloc = { version = "*", optional = true, default-features = false }
+snmalloc-rs = { version = "*", optional = true }
+nix = "0.23"
+subprocess = "0.2"
+indexmap = "1.8"
+smallvec = "1.8.0"
+twox-hash = "1.6"
+fxhash = "0.2"
+
+[dev-dependencies]
+itertools = "0.10"
+hex-literal = "0.3"
+
+
+[[bin]]
+name = "ethmutator_tester"
+path = "misc/tester.rs"

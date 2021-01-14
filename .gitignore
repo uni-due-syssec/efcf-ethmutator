@@ -1,0 +1,6 @@
+/target
+/*/target/
+/afl_ethmutator/target
+/ethmutator/target
+/efuzzcaseanalyzer/target
+Cargo.lock

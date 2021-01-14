@@ -1,0 +1,33 @@
+[package]
+name = "ethmutator-tools"
+version = "0.1.0"
+authors = ["Michael Rodler <michael.rodler@paluno.uni-due.de>"]
+edition = "2018"
+license = "AGPLv3"
+
+[dependencies]
+anyhow = "1.0"
+clap = "3.2"
+ethereum-hexutil = "0.2"
+ethmutator = {path = "../ethmutator"}
+tempfile = "3.2"
+subprocess = "0.2"
+libc = "0.2"
+askama = "0.11"
+hex = "0.4"
+
+[[bin]]
+name = "efuzzcaseminimizer"
+path = "src/minimizer.rs"
+
+[[bin]]
+name = "efuzzcaseanalyzer"
+path = "src/analyzer.rs"
+
+[[bin]]
+name = "efuzzcasetranscoder"
+path = "src/transcoder.rs"
+
+[[bin]]
+name = "efuzzcasesynthesizer"
+path = "src/synthesizer.rs"
