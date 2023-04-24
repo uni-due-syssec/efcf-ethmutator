@@ -367,7 +367,7 @@ fn main() -> anyhow::Result<()> {
             Arg::new("quiet")
                 .short('q')
                 .long("quiet")
-                .help("surpress any output"),
+                .help("suppress any output"),
         )
         .arg(
             Arg::new("BINARY")
